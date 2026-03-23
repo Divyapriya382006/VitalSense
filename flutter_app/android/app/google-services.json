@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "665365347352",
+    "project_id": "health-analysis-9a733",
+    "storage_bucket": "health-analysis-9a733.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665365347352:android:7940583e85858e5113176d",
+        "android_client_info": {
+          "package_name": "com.example.vitalsense"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF4s-O5br02D7qLmilU6eIbhbIyZtacgs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:665365347352:android:7e80e82255a7067e13176d",
+        "android_client_info": {
+          "package_name": "com.vitalsense.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF4s-O5br02D7qLmilU6eIbhbIyZtacgs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

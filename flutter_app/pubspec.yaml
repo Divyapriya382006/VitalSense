@@ -1,0 +1,94 @@
+name: vitalsense
+description: AI-Based Vital Analysis & Health Prediction System
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local Database
+  sqflite: ^2.3.2
+  sqflite_common_ffi: ^2.3.3
+  sqlite3_flutter_libs: ^0.5.24
+  path: ^1.9.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.4
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # WebSocket / Networking
+  web_socket_channel: ^2.4.0
+  dio: ^5.4.1
+  connectivity_plus: ^6.0.3
+
+  # UI
+  fl_chart: ^0.67.0
+  flutter_animate: ^4.5.0
+  lottie: ^3.1.0
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.10+1
+  google_fonts: ^6.2.1
+  animations: ^2.0.11
+  flex_color_scheme: ^7.3.1
+
+  # Camera / rPPG
+  camera: ^0.11.0
+  permission_handler: ^11.3.0
+  vector_math: ^2.1.4
+  image: ^4.1.7
+
+  # PDF
+  pdf: ^3.10.8
+  printing: ^5.12.0
+  path_provider: ^2.1.2
+  share_plus: ^8.0.2
+
+  # Maps
+  google_maps_flutter: ^2.6.0
+  geolocator: ^11.0.0
+
+  # Bluetooth Mesh Messaging
+  flutter_blue_plus: ^1.31.14
+
+  # Text to Speech / Speech to Text
+  flutter_tts: ^4.0.2
+  speech_to_text: ^6.6.0
+
+  # Notifications
+  flutter_local_notifications: ^17.1.2
+  workmanager: ^0.5.2
+
+  # Offline Storage
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+
+  # Auth & Misc
+  intl: ^0.19.0
+  uuid: ^4.3.3
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^10.0.0
+  pinput: ^5.0.0
+  image_picker: ^1.0.7
+  file_picker: ^8.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.8
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/animations/
+    - assets/icons/
