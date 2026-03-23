@@ -150,6 +150,8 @@ class DoctorListScreen extends StatefulWidget {
 
 class _DoctorListScreenState extends State<DoctorListScreen> {
   String _searchQuery = '';
+  final Map<int, bool> _isYearlySelected = {}; // Tracks selection per doctor index
+
   final List<Map<String, String>> _allDoctors = [
     {'name': 'Dr. Sarah Jenkins', 'specialty': 'Cardiologist', 'hosp': 'General Hosp', 'exp': '12', 'avail': 'Mon-Fri, 9AM-5PM', 'mPlan': 'FREE', 'yPlan': 'FREE'},
     {'name': 'Dr. Mark Sloan', 'specialty': 'Neurologist', 'hosp': 'City Med', 'exp': '18', 'avail': 'Tue-Thu, 10AM-4PM', 'mPlan': '\$69/mo', 'yPlan': '\$690/yr'},
@@ -230,25 +232,36 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                               )
                             ),
                             const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(child: _buildPlanCard('Monthly Plan', d['mPlan']!, false)),
-                                const SizedBox(width: 12),
-                                Expanded(child: _buildPlanCard('Yearly Plan', d['yPlan']!, true)),
-                              ],
-                            ),
+                             Row(
+                               children: [
+                                 Expanded(
+                                   child: GestureDetector(
+                                     onTap: () => setState(() => _isYearlySelected[i] = false),
+                                     child: _buildPlanCard('Monthly Plan', d['mPlan']!, !(_isYearlySelected[i] ?? true)),
+                                   ),
+                                 ),
+                                 const SizedBox(width: 12),
+                                 Expanded(
+                                   child: GestureDetector(
+                                     onTap: () => setState(() => _isYearlySelected[i] = true),
+                                     child: _buildPlanCard('Yearly Plan', d['yPlan']!, _isYearlySelected[i] ?? true),
+                                   ),
+                                 ),
+                               ],
+                             ),
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () {
-                                  if (d['mPlan'] == 'FREE') {
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Assigned to ${d['name']} for free!'), backgroundColor: const Color(0xFF00e5ff), duration: const Duration(seconds: 2)));
-                                  } else {
-                                    _showPaymentModal(context, d);
-                                  }
-                                },
+                                 onPressed: () {
+                                   if (d['mPlan'] == 'FREE') {
+                                     Navigator.pop(context);
+                                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Assigned to ${d['name']} for free!'), backgroundColor: const Color(0xFF00e5ff), duration: const Duration(seconds: 2)));
+                                   } else {
+                                     final isYearly = _isYearlySelected[i] ?? true;
+                                     _showPaymentModal(context, d, isYearly);
+                                   }
+                                 },
                                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00e5ff), foregroundColor: const Color(0xFF060d14)),
                                 child: Text(d['mPlan'] == 'FREE' ? 'Select Doctor' : 'Select & Subscribe', style: const TextStyle(fontWeight: FontWeight.bold)),
                               ),
@@ -291,7 +304,9 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     );
   }
 
-  void _showPaymentModal(BuildContext context, Map<String, String> doctor) {
+  void _showPaymentModal(BuildContext context, Map<String, String> doctor, bool isYearly) {
+    final price = isYearly ? doctor['yPlan'] : doctor['mPlan'];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -304,13 +319,13 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           children: [
             const Text('Secure Checkout', style: TextStyle(color: Color(0xFFc8dae8), fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
             const SizedBox(height: 12),
-            Text('Subscribe to ${doctor['name']} for ${doctor['yPlan']}', style: const TextStyle(color: Color(0xFF4a6478), fontSize: 14)),
+            Text('Subscribe to ${doctor['name']} for $price', style: const TextStyle(color: Color(0xFF4a6478), fontSize: 14)),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
               child: Image.network(
-                'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=doctor@upi&pn=VitalSense&am=${doctor['yPlan']!.replaceAll(RegExp(r'[^0-9]'), '')}',
+                'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=doctor@upi&pn=VitalSense&am=${price!.replaceAll(RegExp(r'[^0-9]'), '')}',
                 height: 150, width: 150,
               ),
             ),
