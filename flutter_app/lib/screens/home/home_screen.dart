@@ -567,61 +567,55 @@ class _DashboardPage extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // ── HR / SpO₂ mini trend ───────────────────────────────────────────
-        _CCard('HR · SpO₂ Trend', SizedBox(
-          height: 150,
+        // ── HR Trend ──────────────────────────────────────────────────────
+        _CCard('Heart Rate Trend', SizedBox(
+          height: 80,
           child: hrHistory.length > 1
               ? LineChart(LineChartData(
-                  gridData: FlGridData(
-                    show: true, drawVerticalLine: false,
-                    getDrawingHorizontalLine: (_) =>
-                        const FlLine(color: _border, strokeWidth: 0.5),
-                  ),
+                  minY: 40, maxY: 160,
+                  gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (_) => const FlLine(color: _border, strokeWidth: 0.5)),
                   titlesData: FlTitlesData(
-                    leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                      showTitles: true, reservedSize: 28,
-                      getTitlesWidget: (v, _) => Text('${v.toInt()}',
-                          style: const TextStyle(color: _muted, fontSize: 8)),
-                    )),
-                    rightTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                      showTitles: true, reservedSize: 28,
-                      getTitlesWidget: (v, _) => Text('${v.toInt()}',
-                          style: const TextStyle(color: _spo2Col, fontSize: 8)),
-                    )),
-                    bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
-                    topTitles: AxisTitles(
-                        sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 22, getTitlesWidget: (v, _) => Text('${v.toInt()}', style: const TextStyle(color: _hrCol, fontSize: 8)))),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: false),
                   lineBarsData: [
                     LineChartBarData(
-                      spots: hrHistory.asMap().entries
-                          .map((e) => FlSpot(e.key.toDouble(), e.value))
-                          .toList(),
-                      isCurved: true, color: _hrCol, barWidth: 2,
-                      dotData: FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                          show: true,
-                          color: _hrCol.withOpacity(0.08)),
-                    ),
-                    LineChartBarData(
-                      spots: spo2History.asMap().entries
-                          .map((e) => FlSpot(e.key.toDouble(), e.value))
-                          .toList(),
-                      isCurved: true, color: _spo2Col, barWidth: 2,
-                      dotData: FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                          show: true,
-                          color: _spo2Col.withOpacity(0.08)),
+                      spots: hrHistory.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                      isCurved: true, color: _hrCol, barWidth: 2, dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(show: true, color: _hrCol.withOpacity(0.1)),
                     ),
                   ],
                 ))
-              : const Center(
-                  child: Text('Collecting data…',
-                      style: TextStyle(color: _muted, fontSize: 11))),
+              : const Center(child: Text('Collecting...', style: TextStyle(color: _muted, fontSize: 10))),
+        )),
+        const SizedBox(height: 8),
+
+        // ── SpO2 Trend ──────────────────────────────────────────────────────
+        _CCard('SpO2 (Oxygen) Trend', SizedBox(
+          height: 80,
+          child: spo2History.length > 1
+              ? LineChart(LineChartData(
+                  minY: 88, maxY: 101, // Narrow range for visibility
+                  gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (_) => const FlLine(color: _border, strokeWidth: 0.5)),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 22, getTitlesWidget: (v, _) => Text('${v.toInt()}', style: const TextStyle(color: _spo2Col, fontSize: 8)))),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spo2History.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                      isCurved: true, color: _spo2Col, barWidth: 2, dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(show: true, color: _spo2Col.withOpacity(0.1)),
+                    ),
+                  ],
+                ))
+              : const Center(child: Text('Collecting...', style: TextStyle(color: _muted, fontSize: 10))),
         )),
         const SizedBox(height: 14),
 
