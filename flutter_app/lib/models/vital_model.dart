@@ -11,6 +11,9 @@ class VitalReading {
   final double? systolicBP;
   final double? diastolicBP;
   final double phiScore; // 0-100
+  final double? stressLevel; // 0-100 from HRV
+  final double? hrv; // ms
+  final String? source; // 'sensor' | 'rppg' | 'manual'
   final Map<String, dynamic>? xaiExplanation;
   final String? periodPhase;
   final int? daysUntilPeriod;
