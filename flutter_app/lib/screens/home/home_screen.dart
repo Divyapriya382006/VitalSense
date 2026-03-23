@@ -516,10 +516,10 @@ class _DashboardPage extends StatelessWidget {
             const SizedBox(height: 12),
             Stack(alignment: Alignment.center, children: [
               SizedBox(
-                width: 100, height: 100,
-                child: CircularProgressIndicator(value: pp/100, strokeWidth: 8, backgroundColor: _bg3, color: VitalSenseTheme.getPHIColor(pp.toDouble())),
+                width: 70, height: 70,
+                child: CircularProgressIndicator(value: pp/100, strokeWidth: 6, backgroundColor: _bg3, color: VitalSenseTheme.getPHIColor(pp.toDouble())),
               ),
-              Text('$pp', style: TextStyle(color: VitalSenseTheme.getPHIColor(pp.toDouble()), fontSize: 32, fontWeight: FontWeight.w900)),
+              Text('$pp', style: TextStyle(color: VitalSenseTheme.getPHIColor(pp.toDouble()), fontSize: 24, fontWeight: FontWeight.w900)),
             ]),
             const SizedBox(height: 12),
             Text(status.toUpperCase(), style: TextStyle(color: VitalSenseTheme.getPHIColor(pp.toDouble()), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
@@ -555,7 +555,7 @@ class _DashboardPage extends StatelessWidget {
           crossAxisSpacing: 3, mainAxisSpacing: 3,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.6,
+          childAspectRatio: 2.2,
           children: [
             _VCard('Heart Rate', '${hr.toInt()}', 'BPM',  _hrCol, Icons.favorite_rounded),
             _VCard('SpO₂',       '${spo2.toInt()}', '%',   _spo2Col, Icons.air_rounded),
@@ -1623,13 +1623,12 @@ Widget _VCard(String label, String value, String unit, Color color, IconData ico
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            Text(value, style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w900, fontFamily: 'monospace')),
+            Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w900, fontFamily: 'monospace')),
             const SizedBox(width: 2),
-            Text(unit, style: const TextStyle(color: _muted, fontSize: 9, fontWeight: FontWeight.bold)),
+            Text(unit, style: const TextStyle(color: _muted, fontSize: 8, fontWeight: FontWeight.bold)),
           ],
         ),
-        const SizedBox(height: 2),
-        Text(label.toUpperCase(), style: const TextStyle(color: _text, fontSize: 8, letterSpacing: 0.5, fontWeight: FontWeight.w700)),
+        Text(label.toUpperCase(), style: const TextStyle(color: _text, fontSize: 7, letterSpacing: 0.5, fontWeight: FontWeight.w700)),
       ],
     ),
   );

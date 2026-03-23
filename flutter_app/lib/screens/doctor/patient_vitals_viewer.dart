@@ -73,7 +73,7 @@ class PatientVitalsViewer extends ConsumerWidget {
   Widget _buildHeroStats(BuildContext context, VitalReading vital) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -93,7 +93,7 @@ class PatientVitalsViewer extends ConsumerWidget {
               _StatMini('HEART RATE VARIABILITY', '${vital.hrv?.toInt() ?? 0}ms', const Color(0xFF00e5ff)),
             ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -190,7 +190,7 @@ class _StatMini extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(color: Colors.white24, fontSize: 9, fontWeight: FontWeight.bold)),
-        Text(val, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w900)),
+        Text(val, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w900)),
       ],
     );
   }
@@ -207,20 +207,20 @@ class _HeroMetric extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: color.withOpacity(0.1), 
             shape: BoxShape.circle,
             border: Border.all(color: color.withOpacity(0.2), width: 1.5),
           ),
-          child: Icon(icon, color: color, size: 28),
+          child: Icon(icon, color: color, size: 20),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+            Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
             Padding(padding: const EdgeInsets.only(bottom: 4, left: 3), child: Text(unit, style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold))),
           ],
         ),
