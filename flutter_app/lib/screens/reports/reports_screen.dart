@@ -4,7 +4,9 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vitals_provider.dart';
+import '../../providers/hardware_provider.dart';
 import '../../services/pdf_service.dart';
+import '../../widgets/mode_banner_widget.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -56,6 +58,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Mode banner
+            const ModeBannerWidget(),
+            const SizedBox(height: 12),
             // ── Filter By Date ───────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -213,6 +218,26 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
                             child: Text('PHI ${r.phiScore.toInt()}', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
                           ),
+                          const SizedBox(width: 4),
+                          // Source chip
+                          Builder(builder: (_) {
+                            final src = (r.source ?? 'demo').toUpperCase();
+                            final sc = src == 'SENSOR'
+                                ? const Color(0xFF69ff47)
+                                : src.contains('CACHE')
+                                    ? const Color(0xFFffab00)
+                                    : const Color(0xFF4a6478);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: sc.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: sc.withOpacity(0.4), width: 0.7),
+                              ),
+                              child: Text(src.contains('CACHE') ? 'CACHED' : src,
+                                  style: TextStyle(color: sc, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.8)),
+                            );
+                          }),
                         ],
                       ),
                     ).animate(delay: (i * 40).ms).fadeIn();

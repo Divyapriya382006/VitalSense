@@ -10,6 +10,9 @@ import '../reports/reports_screen.dart';
 import '../profile_screen.dart';
 import '../upload_screen.dart';
 import '../../theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/hardware_provider.dart';
+import '../../widgets/mode_banner_widget.dart';
 
 // ── Colour tokens ──────────────────────────────────────────────────────────────
 const _bg     = Color(0xFF060d14);
@@ -40,13 +43,13 @@ const _ecgBorder    = Color(0xFF006618);
 // ══════════════════════════════════════════════════════════════════════════════
 //  HOME SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStateMixin {
   int _tabIndex = 0;
   late PageController _pageController;
   late AnimationController _ecgController;
@@ -71,10 +74,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final List<Map<String, dynamic>> _alerts    = [];
   int _warnCount = 0, _critCount = 0, _infoCount = 1;
 
-  final List<String> _tabs = ['Home', 'Mesh', 'Wellness', 'Reports', 'Upload', 'Telemed', 'Profile'];
+  final List<String> _tabs = ['Home', 'Mesh', 'Wellness', 'Reports', 'Upload', 'Telemed', 'Profile', 'Hardware'];
   final List<IconData> _tabIcons = [
     Icons.home_filled, Icons.face_retouching_natural_rounded,
-    Icons.spa_rounded, Icons.analytics_rounded, Icons.upload_file_rounded, Icons.chat_outlined, Icons.person_pin
+    Icons.spa_rounded, Icons.analytics_rounded, Icons.upload_file_rounded, Icons.chat_outlined, Icons.person_pin, Icons.memory
   ];
 
   @override
@@ -137,12 +140,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _startAutoSim() {
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
+      final hwState = ref.read(hardwareProvider);
       setState(() {
-        _hr   = (_hr   + (Random().nextDouble() - 0.48) * 3).clamp(40, 160);
-        _spo2 = (_spo2 + (Random().nextDouble() - 0.45) * 0.5).clamp(85, 100);
-        _temp = (_temp + (Random().nextDouble() - 0.5)  * 0.05).clamp(35, 40);
-        _hr   = _hr.roundToDouble();
-        _spo2 = _spo2.roundToDouble();
+        if (hwState.isRealTimeMode) {
+          _hr = hwState.latestHr;
+          _spo2 = hwState.latestSpo2;
+          _temp = hwState.latestTemp;
+        } else {
+          _hr   = (_hr   + (Random().nextDouble() - 0.48) * 3).clamp(40, 160);
+          _spo2 = (_spo2 + (Random().nextDouble() - 0.45) * 0.5).clamp(85, 100);
+          _temp = (_temp + (Random().nextDouble() - 0.5)  * 0.05).clamp(35, 40);
+          _hr   = _hr.roundToDouble();
+          _spo2 = _spo2.roundToDouble();
+        }
 
         _status = (_spo2 < 88 || _hr > 140 || _hr < 40)
             ? 'Critical'
@@ -167,7 +177,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         _history.insert(0, {
           'hr': _hr, 'spo2': _spo2, 'temp': _temp,
-          'ts': ts,  'status': _status
+          'ts': ts,  'status': _status,
+          'source': hwState.isRealTimeMode ? hwState.sourceLabel : 'DEMO',
         });
         if (_history.length > 50) _history.removeLast();
 
@@ -298,6 +309,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const DoctorChatScreen(doctorName: 'Dr. Sarah Jenkins', isTab: true),
                 // ⑦ Profile
                 const ProfileScreen(),
+                // ⑧ Hardware Config
+                const _ConfigPage(),
               ],
             ),
           ),
@@ -493,6 +506,9 @@ class _DashboardPage extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Mode Banner ───────────────────────────────────────────────────
+        const ModeBannerWidget(),
+        const SizedBox(height: 8),
         // ── PHI Score / Health Gauge ───────────────────────────────────────
         Container(
           width: double.infinity,
@@ -1398,18 +1414,79 @@ class _AlertsPage extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 //  CONFIG PAGE
 // ══════════════════════════════════════════════════════════════════════════════
-class _ConfigPage extends StatelessWidget {
+class _ConfigPage extends ConsumerStatefulWidget {
   final double hr, spo2, temp;
-  const _ConfigPage({required this.hr, required this.spo2, required this.temp});
+  const _ConfigPage({required this.hr, required this.spo2, required this.temp});  // ignore: unused_element
+  @override
+  ConsumerState<_ConfigPage> createState() => _ConfigPageState();
+}
+
+class _ConfigPageState extends ConsumerState<_ConfigPage> {
+  late TextEditingController _ipCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final hw = ref.read(hardwareProvider);
+    _ipCtrl = TextEditingController(text: hw.ipAddress);
+  }
+
+  @override
+  void dispose() {
+    _ipCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final hw = ref.watch(hardwareProvider);
+    final notifier = ref.read(hardwareProvider.notifier);
+    final isRt = hw.isRealTimeMode;
+    final statusColor = hw.connectionStatus == HwConnectionStatus.connected
+        ? _accentG
+        : hw.connectionStatus == HwConnectionStatus.fingerNotDetected
+            ? _warn
+            : hw.connectionStatus == HwConnectionStatus.connecting
+                ? _accent
+                : _crit;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(14),
       child: Column(children: [
-        _CCard('ESP32 Connection', Column(
+        // ── Mode Banner ──────────────────────────────────────────────────
+        const ModeBannerWidget(),
+        const SizedBox(height: 12),
+
+        // ── Connection Card ──────────────────────────────────────────────
+        _CCard('ESP32 Hardware Connection', Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text('SENSOR MODE',
+                style: TextStyle(color: _muted, fontSize: 9,
+                    fontFamily: 'monospace', letterSpacing: 1.5)),
+            const SizedBox(height: 8),
+            // Mode toggle row
+            Row(children: [
+              Expanded(child: Text(
+                isRt ? 'Real-Time Hardware' : 'Demo Mode',
+                style: TextStyle(
+                    color: isRt ? _accentG : _muted,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w700, fontSize: 12),
+              )),
+              Switch.adaptive(
+                value: isRt,
+                activeColor: _accent,
+                onChanged: (val) {
+                  if (val && hw.ipAddress.isEmpty) {
+                    _showIpDialog(context, notifier);
+                  } else {
+                    notifier.setRealTimeMode(val);
+                  }
+                },
+              ),
+            ]),
+            const SizedBox(height: 8),
             const Text('ESP32 IP Address',
                 style: TextStyle(color: _muted, fontSize: 9,
                     fontFamily: 'monospace', letterSpacing: 1)),
@@ -1417,10 +1494,11 @@ class _ConfigPage extends StatelessWidget {
             Row(children: [
               Expanded(
                 child: TextField(
+                  controller: _ipCtrl,
                   style: const TextStyle(
                       color: _text, fontFamily: 'monospace', fontSize: 12),
                   decoration: InputDecoration(
-                    hintText: '192.168.1.100',
+                    hintText: '192.168.x.x',
                     hintStyle: const TextStyle(color: _muted),
                     filled: true, fillColor: _bg3,
                     contentPadding: const EdgeInsets.symmetric(
@@ -1433,42 +1511,58 @@ class _ConfigPage extends StatelessWidget {
                         borderSide: const BorderSide(color: _border)),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide:
-                            const BorderSide(color: _accent, width: 1.5)),
+                        borderSide: const BorderSide(color: _accent, width: 1.5)),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               GestureDetector(
-                onTap: () {},
+                onTap: () {
+                  notifier.setIpAddress(_ipCtrl.text.trim());
+                  notifier.setRealTimeMode(!isRt || true);
+                },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    border: Border.all(color: _accentG),
+                    border: Border.all(color: isRt ? _crit : _accentG),
                     borderRadius: BorderRadius.circular(8),
-                    color: _accentG.withOpacity(0.08),
+                    color: isRt
+                        ? _crit.withOpacity(0.08)
+                        : _accentG.withOpacity(0.08),
                   ),
-                  child: const Text('Connect',
+                  child: Text(isRt ? 'Disconnect' : 'Connect',
                       style: TextStyle(
-                          color: _accentG, fontFamily: 'monospace',
+                          color: isRt ? _crit : _accentG,
+                          fontFamily: 'monospace',
                           fontSize: 11, fontWeight: FontWeight.w700)),
                 ),
               ),
             ]),
             const SizedBox(height: 12),
+            // Status box
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF1a0f00),
+                color: statusColor.withOpacity(0.07),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _warn.withOpacity(0.4)),
+                border: Border.all(color: statusColor.withOpacity(0.35)),
               ),
-              child: const Text(
-                '⊙ DEMO MODE — Using simulated sensor data. '
-                'Enter ESP32 IP to connect live hardware.',
-                style: TextStyle(color: _warn,
-                    fontFamily: 'monospace', fontSize: 11),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Icon(_statusIcon(hw.connectionStatus), color: statusColor, size: 14),
+                    const SizedBox(width: 6),
+                    Text(_statusText(hw, isRt),
+                        style: TextStyle(color: statusColor,
+                            fontFamily: 'monospace', fontSize: 11)),
+                  ]),
+                  if (isRt && hw.isConnected) ...[  
+                    const SizedBox(height: 6),
+                    Text('HR: ${hw.latestHr.toInt()} BPM  ·  SpO₂: ${hw.latestSpo2.toInt()}%  ·  Temp: ${hw.latestTemp.toStringAsFixed(1)}°C',
+                        style: const TextStyle(color: _text, fontFamily: 'monospace', fontSize: 10)),
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -1476,15 +1570,74 @@ class _ConfigPage extends StatelessWidget {
                 style: TextStyle(color: _muted, fontSize: 9,
                     fontFamily: 'monospace', letterSpacing: 1.5)),
             const SizedBox(height: 8),
-            _WR('MAX30102', 'SDA:GPIO21, SCL:GPIO22',              _accent),
-            _WR('DS18B20',  'GPIO4 + 4.7kΩ to 3.3V',              _tempCol),
-            _WR('DHT11',    'GPIO15 + 4.7kΩ to 3.3V',             _ambCol),
-            _WR('Required libs',
-                'MAX30105, DallasTemp, DHT, ArduinoJson',          _muted),
+            _WR('MAX30102',     'SDA:GPIO21, SCL:GPIO22',                   _accent),
+            _WR('DS18B20',      'GPIO4 + 4.7kΩ pull-up to 3.3V',           _tempCol),
+            _WR('DHT11',        'GPIO15 + 4.7kΩ pull-up to 3.3V',          _ambCol),
+            _WR('Required libs','MAX30105, DallasTemp, DHT, ArduinoJson',   _muted),
           ],
         )),
         const SizedBox(height: 80),
       ]),
+    );
+  }
+
+  IconData _statusIcon(HwConnectionStatus s) {
+    switch (s) {
+      case HwConnectionStatus.connected: return Icons.sensors_rounded;
+      case HwConnectionStatus.fingerNotDetected: return Icons.touch_app_rounded;
+      case HwConnectionStatus.connecting: return Icons.sync_rounded;
+      case HwConnectionStatus.disconnected: return Icons.sensors_off_rounded;
+    }
+  }
+
+  String _statusText(HardwareState hw, bool isRt) {
+    if (!isRt) return '⊙ DEMO MODE — simulated sensor data';
+    switch (hw.connectionStatus) {
+      case HwConnectionStatus.connected: return '✓ CONNECTED — live sensor active';
+      case HwConnectionStatus.fingerNotDetected: return '⦿ CONNECTED — place finger on sensor';
+      case HwConnectionStatus.connecting: return '⦾ CONNECTING to ${hw.ipAddress}…';
+      case HwConnectionStatus.disconnected: return '✗ DISCONNECTED — cached values shown';
+    }
+  }
+
+  void _showIpDialog(BuildContext context, HardwareNotifier notifier) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _bg2,
+        title: const Text('Enter ESP32 IP',
+            style: TextStyle(color: _text, fontFamily: 'monospace', fontSize: 14)),
+        content: TextField(
+          controller: _ipCtrl,
+          style: const TextStyle(color: _text, fontFamily: 'monospace'),
+          decoration: InputDecoration(
+            hintText: '192.168.x.x',
+            hintStyle: const TextStyle(color: _muted),
+            filled: true, fillColor: _bg3,
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: _border)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: _accent, width: 1.5)),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: _muted))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: _accent),
+            onPressed: () {
+              notifier.setIpAddress(_ipCtrl.text.trim());
+              notifier.setRealTimeMode(true);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Connect',
+                style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
     );
   }
 }

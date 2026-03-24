@@ -8,6 +8,8 @@ import '../../providers/admin_provider.dart';
 import '../doctor/patient_vitals_viewer.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user_model.dart';
+import '../../providers/hardware_provider.dart';
+import '../../widgets/mode_banner_widget.dart';
 
 // Hardcoded demo users for admin panel
 final _allDemoUsers = [
@@ -99,6 +101,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> with TickerProviderSt
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const ModeBannerWidget(showToggle: true),
+          const SizedBox(height: 12),
           const Text('SYSTEM SNAPSHOT', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
           const SizedBox(height: 12),
           _StatGrid(),

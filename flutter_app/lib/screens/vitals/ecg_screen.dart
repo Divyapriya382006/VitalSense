@@ -9,6 +9,8 @@ import '../alerts/alerts_screen.dart';
 import '../profile/profile_screen.dart';
 import '../../widgets/sos_button_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/hardware_provider.dart';
+import '../../widgets/mode_banner_widget.dart';
 
 const _bg     = Color(0xFF060d14);
 const _bg2    = Color(0xFF0c1824);
@@ -76,7 +78,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   void _ecgTick() {
     if (!mounted) return;
     setState(() {
-      _ecgPhase += 0.00055;
+      // Phase increment: (33 ms frame / 1000 ms) × (HR / 60)
+      // Ensures exactly 1 waveform cycle per heartbeat at any HR.
+      _ecgPhase += (0.033 * _hr / 60);
       _ecgData.add(_ecgValue(_ecgPhase));
       if (_ecgData.length > _ecgMax) _ecgData.removeAt(0);
     });
@@ -96,17 +100,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with TickerProviderStat
   void _startAutoSim() {
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
+      final hwState = ref.read(hardwareProvider);
       setState(() {
-        _hr = (_hr + (Random().nextDouble() - 0.48) * 3).clamp(40, 160);
-        _spo2 = (_spo2 + (Random().nextDouble() - 0.45) * 0.5).clamp(85, 100);
-        _temp = (_temp + (Random().nextDouble() - 0.5) * 0.05).clamp(35, 40);
-        _hr = _hr.roundToDouble(); _spo2 = _spo2.roundToDouble();
-        _status = (_spo2 < 88 || _hr > 140 || _hr < 40) ? 'Critical' : (_spo2 < 92 || _hr > 110) ? 'Warning' : 'Normal';
+        if (hwState.isRealTimeMode) {
+          _hr   = hwState.latestHr;
+          _spo2 = hwState.latestSpo2;
+          _temp = hwState.latestTemp;
+        } else {
+          _hr   = (_hr   + (Random().nextDouble() - 0.48) * 3).clamp(40, 160);
+          _spo2 = (_spo2 + (Random().nextDouble() - 0.45) * 0.5).clamp(85, 100);
+          _temp = (_temp + (Random().nextDouble() - 0.5) * 0.05).clamp(35, 40);
+          _hr   = _hr.roundToDouble();
+          _spo2 = _spo2.roundToDouble();
+        }
+        _status = (_spo2 < 88 || _hr > 140 || _hr < 40) ? 'Critical'
+            : (_spo2 < 92 || _hr > 110) ? 'Warning' : 'Normal';
 
         final ts = '${DateTime.now().hour.toString().padLeft(2,'0')}:${DateTime.now().minute.toString().padLeft(2,'0')}';
         if (_hrHistory.length >= 30) { _hrHistory.removeAt(0); _spo2History.removeAt(0); _tempHistory.removeAt(0); _timeLabels.removeAt(0); }
         _hrHistory.add(_hr); _spo2History.add(_spo2); _tempHistory.add(_temp); _timeLabels.add(ts);
-        _history.insert(0, {'hr': _hr, 'spo2': _spo2, 'temp': _temp, 'ts': ts, 'status': _status});
+        _history.insert(0, {'hr': _hr, 'spo2': _spo2, 'temp': _temp, 'ts': ts, 'status': _status,
+            'source': hwState.isRealTimeMode ? hwState.sourceLabel : 'DEMO'});
         if (_history.length > 50) _history.removeLast();
 
         if (_spo2 < 88) _addAlert('crit', '🚨 Critical SpO₂ — ${_spo2.toInt()}%', ts);
@@ -424,46 +438,152 @@ class _AlertsPage extends StatelessWidget {
   }
 }
 
-class _ConfigPage extends StatelessWidget {
+class _ConfigPage extends ConsumerStatefulWidget {
   final double hr, spo2, temp;
   const _ConfigPage({required this.hr, required this.spo2, required this.temp});
+  @override
+  ConsumerState<_ConfigPage> createState() => _ConfigPageState();
+}
+
+class _ConfigPageState extends ConsumerState<_ConfigPage> {
+  late TextEditingController _ipCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ipCtrl = TextEditingController(text: ref.read(hardwareProvider).ipAddress);
+  }
+
+  @override
+  void dispose() { _ipCtrl.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
+    final hw = ref.watch(hardwareProvider);
+    final notifier = ref.read(hardwareProvider.notifier);
+    final isRt = hw.isRealTimeMode;
+    final statusColor = hw.connectionStatus == HwConnectionStatus.connected
+        ? _accentG
+        : hw.connectionStatus == HwConnectionStatus.fingerNotDetected
+            ? _warn
+            : hw.connectionStatus == HwConnectionStatus.connecting
+                ? _accent
+                : _crit;
+
     return SingleChildScrollView(padding: const EdgeInsets.all(14), child: Column(children: [
-      _CCard('ESP32 Connection', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const ModeBannerWidget(),
+      const SizedBox(height: 12),
+      _CCard('ESP32 Hardware Connection', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(isRt ? 'Real-Time Hardware' : 'Demo Mode',
+              style: TextStyle(color: isRt ? _accentG : _muted,
+                  fontFamily: 'monospace', fontWeight: FontWeight.w700, fontSize: 12))),
+          Switch.adaptive(
+            value: isRt, activeColor: _accent,
+            onChanged: (val) {
+              if (val && hw.ipAddress.isEmpty) _showIpDialog(context, notifier);
+              else notifier.setRealTimeMode(val);
+            },
+          ),
+        ]),
+        const SizedBox(height: 8),
         const Text('ESP32 IP Address', style: TextStyle(color: _muted, fontSize: 9, fontFamily: 'monospace', letterSpacing: 1)),
         const SizedBox(height: 6),
         Row(children: [
           Expanded(child: TextField(
+            controller: _ipCtrl,
             style: const TextStyle(color: _text, fontFamily: 'monospace', fontSize: 12),
-            decoration: InputDecoration(hintText: '192.168.1.100', hintStyle: const TextStyle(color: _muted),
+            decoration: InputDecoration(hintText: '192.168.x.x', hintStyle: const TextStyle(color: _muted),
               filled: true, fillColor: _bg3, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _accent, width: 1.5))),
           )),
           const SizedBox(width: 10),
-          GestureDetector(onTap: () {},
+          GestureDetector(
+            onTap: () { notifier.setIpAddress(_ipCtrl.text.trim()); notifier.setRealTimeMode(!isRt || true); },
             child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(border: Border.all(color: _accentG), borderRadius: BorderRadius.circular(8), color: _accentG.withOpacity(0.08)),
-              child: const Text('Connect', style: TextStyle(color: _accentG, fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.w700)))),
+              decoration: BoxDecoration(
+                border: Border.all(color: isRt ? _crit : _accentG),
+                borderRadius: BorderRadius.circular(8),
+                color: (isRt ? _crit : _accentG).withOpacity(0.08),
+              ),
+              child: Text(isRt ? 'Disconnect' : 'Connect',
+                  style: TextStyle(color: isRt ? _crit : _accentG, fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.w700)))),
         ]),
         const SizedBox(height: 12),
-        Container(padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(0xFF1a0f00), borderRadius: BorderRadius.circular(8), border: Border.all(color: _warn.withOpacity(0.4))),
-          child: const Text('⊙ DEMO MODE — Using simulated sensor data. Enter ESP32 IP to connect live hardware.',
-              style: TextStyle(color: _warn, fontFamily: 'monospace', fontSize: 11))),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.07), borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: statusColor.withOpacity(0.35)),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(_sIcon(hw.connectionStatus), color: statusColor, size: 14),
+              const SizedBox(width: 6),
+              Expanded(child: Text(_sText(hw, isRt), style: TextStyle(color: statusColor, fontFamily: 'monospace', fontSize: 11))),
+            ]),
+            if (isRt && hw.isConnected) ...[ 
+              const SizedBox(height: 6),
+              Text('HR: ${hw.latestHr.toInt()} BPM  ·  SpO₂: ${hw.latestSpo2.toInt()}%  ·  Temp: ${hw.latestTemp.toStringAsFixed(1)}°C',
+                  style: const TextStyle(color: _text, fontFamily: 'monospace', fontSize: 10)),
+            ],
+          ]),
+        ),
         const SizedBox(height: 16),
         const Text('WIRING REFERENCE', style: TextStyle(color: _muted, fontSize: 9, fontFamily: 'monospace', letterSpacing: 1.5)),
         const SizedBox(height: 8),
-        _WR('MAX30102', 'SDA:GPIO21, SCL:GPIO22', _accent),
-        _WR('DS18B20', 'GPIO4 + 4.7kΩ to 3.3V', _tempCol),
-        _WR('DHT11', 'GPIO15 + 4.7kΩ to 3.3V', _ambCol),
+        _WR('MAX30102',      'SDA:GPIO21, SCL:GPIO22',              _accent),
+        _WR('DS18B20',       'GPIO4 + 4.7kΩ pull-up to 3.3V',      _tempCol),
+        _WR('DHT11',         'GPIO15 + 4.7kΩ pull-up to 3.3V',     _ambCol),
         _WR('Required libs', 'MAX30105, DallasTemp, DHT, ArduinoJson', _muted),
       ])),
       const SizedBox(height: 80),
     ]));
+  }
+
+  IconData _sIcon(HwConnectionStatus s) {
+    switch (s) {
+      case HwConnectionStatus.connected: return Icons.sensors_rounded;
+      case HwConnectionStatus.fingerNotDetected: return Icons.touch_app_rounded;
+      case HwConnectionStatus.connecting: return Icons.sync_rounded;
+      case HwConnectionStatus.disconnected: return Icons.sensors_off_rounded;
+    }
+  }
+
+  String _sText(HardwareState hw, bool isRt) {
+    if (!isRt) return '⊙ DEMO MODE — simulated sensor data';
+    switch (hw.connectionStatus) {
+      case HwConnectionStatus.connected: return '✓ LIVE SENSOR — ${hw.ipAddress}';
+      case HwConnectionStatus.fingerNotDetected: return '⦿ CONNECTED — place finger on MAX30102';
+      case HwConnectionStatus.connecting: return '⦾ CONNECTING to ${hw.ipAddress}…';
+      case HwConnectionStatus.disconnected: return '✗ DISCONNECTED — cached values shown';
+    }
+  }
+
+  void _showIpDialog(BuildContext ctx, HardwareNotifier n) {
+    showDialog(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        backgroundColor: _bg2,
+        title: const Text('ESP32 IP Address', style: TextStyle(color: _text, fontFamily: 'monospace', fontSize: 14)),
+        content: TextField(controller: _ipCtrl,
+          style: const TextStyle(color: _text, fontFamily: 'monospace'),
+          decoration: InputDecoration(hintText: '192.168.x.x', hintStyle: const TextStyle(color: _muted),
+            filled: true, fillColor: _bg3,
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _accent, width: 1.5)))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: _muted))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: _accent),
+            onPressed: () { n.setIpAddress(_ipCtrl.text.trim()); n.setRealTimeMode(true); Navigator.pop(ctx); },
+            child: const Text('Connect', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
   }
 }
 

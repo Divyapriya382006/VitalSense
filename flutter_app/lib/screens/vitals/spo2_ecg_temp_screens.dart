@@ -6,6 +6,8 @@ import '../../theme/app_theme.dart';
 import '../../models/vital_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vitals_provider.dart';
+import '../../providers/hardware_provider.dart';
+import '../../widgets/mode_banner_widget.dart';
 
 // ─────────────── SpO2 ───────────────
 class SpO2Screen extends ConsumerWidget {
@@ -24,6 +26,8 @@ class SpO2Screen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const ModeBannerWidget(),
+            const SizedBox(height: 12),
             latestAsync.when(
               data: (v) => v != null ? _SpO2Card(vital: v) : const SizedBox(),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -197,6 +201,8 @@ class TemperatureScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const ModeBannerWidget(),
+            const SizedBox(height: 12),
             latestAsync.when(
               data: (v) {
                 if (v == null) return const SizedBox();

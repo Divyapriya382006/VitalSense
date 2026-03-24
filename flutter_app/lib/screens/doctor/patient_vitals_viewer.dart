@@ -5,6 +5,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../providers/vitals_provider.dart';
 import '../../models/vital_model.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/hardware_provider.dart';
+import '../../widgets/mode_banner_widget.dart';
 
 class PatientVitalsViewer extends ConsumerWidget {
   final String patientId;
@@ -31,6 +33,7 @@ class PatientVitalsViewer extends ConsumerWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            const ModeBannerWidget(showToggle: false),
             latestAsync.when(
               data: (vital) => vital != null 
                 ? _buildHeroStats(context, vital)

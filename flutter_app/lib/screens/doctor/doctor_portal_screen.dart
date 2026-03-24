@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/medication_provider.dart';
 import '../../providers/vitals_provider.dart';
+import '../../providers/hardware_provider.dart';
+import '../../widgets/mode_banner_widget.dart';
 import '../profile_screen.dart'; // For DoctorChatScreen and styles
 import 'patient_vitals_viewer.dart';
 
@@ -76,6 +78,9 @@ class _DoctorPortalScreenState extends ConsumerState<DoctorPortalScreen> with Ti
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Mode banner — allows doctor to toggle Demo / Real-Time ──
+          const ModeBannerWidget(showToggle: true),
+          const SizedBox(height: 12),
           const Text('DAILY OVERVIEW', style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
           const SizedBox(height: 16),
           _DocStatGrid(),

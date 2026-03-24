@@ -6,6 +6,8 @@ import '../../theme/app_theme.dart';
 import '../../models/vital_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vitals_provider.dart';
+import '../../providers/hardware_provider.dart';
+import '../../widgets/mode_banner_widget.dart';
 
 class HeartRateScreen extends ConsumerWidget {
   const HeartRateScreen({super.key});
@@ -28,6 +30,9 @@ class HeartRateScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Mode banner
+            const ModeBannerWidget(),
+            const SizedBox(height: 12),
             // Current reading
             latestAsync.when(
               data: (vital) => vital != null ? _CurrentHRCard(vital: vital) : const _NoData(),
